@@ -4,7 +4,7 @@ import json
 from sklearn import svm
 from sklearn import cross_validation
 import numpy as np
-
+import itertools
 
 # all of our data - mostly for reference
 subjects = ['nick', 'john']
@@ -15,6 +15,7 @@ tasks = ['auditory', 'baseline', 'color count', 'eye move', 'eye open move', 'ey
 #
 # config
 #
+
 # number of readings per task
 readingNum = 20
 # number of trials per task
@@ -30,12 +31,13 @@ readingDir = 'processed'
 # a generator of arrays
 # each array is a feature vector to feed to our svm
 def loadAllFeatureVectors(subject, electrodePos, task):
-	for reading in range(readingNum):
-		for trial in range(trialNum):
+	for trial in range(trialNum):
+		for reading in range(readingNum):
 			try:
 				yield loadFeatureVector(subject, electrodePos, task, trial, reading)
 			except:
-				print 'cant find', subject, electrodePos, task, trial, reading
+				pass
+				# print 'cant find', subject, electrodePos, task, trial, reading
 
 def loadFeatureVector(subject, electrodePos, task, trial, reading):
 	readingPath = os.path.join(readingDir, subject, electrodePos, task, str(trial), str(reading) + '.json')
@@ -49,7 +51,7 @@ def loadFeatureVector(subject, electrodePos, task, trial, reading):
 # and produces X and y vectors
 # X is list a vectors, y is a list if (int) labels for those vectors
 # X and y need to be the same length.
-def vecotrsAndLabels(arrayOfGenerators):
+def vectorsAndLabels(arrayOfGenerators):
 	X = []
 	y = []
 	currentLabel = 0
@@ -63,19 +65,29 @@ def vecotrsAndLabels(arrayOfGenerators):
 
 	return X, y
 
+# train + 7-fold cv an svm on set of features + labels
+def crossValidate(X,y):
+	clf = svm.LinearSVC()
+	scores = cross_validation.cross_val_score(clf, np.array(X), y, cv=7)
+	return scores.mean()
+
+
 
 
 #
 # example
 #
-vectors1 = loadAllFeatureVectors('nick', 'erb', 'baseline')
-vectors2 = loadAllFeatureVectors('nick', 'erb', 'color count')
+taskpairs = itertools.combinations(tasks,2)
+for taskpair in taskpairs:
+	vectors1 = loadAllFeatureVectors('john', 'erh', taskpair[0])
+	vectors2 = loadAllFeatureVectors('john', 'erh', taskpair[1])
 
-X, y = vecotrsAndLabels([vectors1, vectors2])
+	X, y = vectorsAndLabels([vectors1, vectors2])
 
-clf = svm.LinearSVC()
-scores = cross_validation.cross_val_score(clf, np.array(X), y, cv=7)
-print scores.mean()
+	try:
+		print crossValidate(X,y), ",", taskpair[0], ",", taskpair[1]
+	except:
+		print 'some problem - probably cant find task:', taskpair[0], taskpair[1]
 
 
 

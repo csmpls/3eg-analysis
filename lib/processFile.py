@@ -14,4 +14,5 @@ def processData(dictionary, numBins):
   # power spec of the raw values
   pspec = brainlib.pSpectrum(rawValues)
   dictionary[u'pspec'] = json.dumps(pspec.tolist())
+  dictionary[u'entropy'] = json.dumps(brainlib.entropy(pspec,1))
   return dictionary
