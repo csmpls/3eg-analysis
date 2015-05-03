@@ -14,65 +14,37 @@ def pSpectrum(vector):
         
     return ps
 
-#ps = pSpectrum(test[500:600])
 #loglog(ps)
 
-def entropy(power_spectrum,q):
+def entropy(powerSpectrum,q):
     q = float(q)
     
-    power_spectrum = np.array(power_spectrum)
+    powerSpectrum = np.array(powerSpectrum)
         
     if not q ==1:
-        S = 1/(q-1)*(1-np.sum(power_spectrum**q))
+        S = 1/(q-1)*(1-np.sum(powerSpectrum**q))
     else:
-        S = - np.sum(power_spectrum*np.log2(power_spectrum))
+        S = - np.sum(powerSpectrum*np.log2(powerSpectrum))
         
     return S
 
-def entropySeries(time,rawData,q,windowSize=1,normalize=True):
-    
-    
-    #t = tSeries['rawTime']
-    #raw = tSeries['rawValue']
-    
-    t = np.array(time)
-    raw = np.array(rawData)
-    
-    intervales = np.arange(np.trunc(min(t)+1),np.trunc(max(t)+1),windowSize)
 
-    T = []
-    S = [] 
-    spectra = []
-    
-    for i,ix in enumerate(intervales[:-1]):
-        #print i,ix
-        
-        c = (t>=ix)*(t<intervales[i+1])
-        
-        vector = raw[c]
-        ps = np.array(pSpectrum(vector)) # Power Spectrum
-        
-        try:
-            spectra += [ps]
-        except:
-            spectra = [ps]
+'''
+takes an array of power spectra and makes an evaluation for each point specified in xOutput. Note that I am not using the binning function anymore. The output is an array of evaluations for each powerspectrum at each time point.
 
-        
-        
-        #if normalize:
-        ps = ps/np.sum(ps)
-        
-        s = entropy(ps,q) #Compute Entropy
-        S.append(s)
-        T.append(i)
+The get the average and the confidence intervals you need to process the array output as the following:
 
-    S = np.array(S)
-    T = np.array(T)
-    
-    if normalize:
-        S = (S-np.mean(S))/np.std(S)
-        
-    return {'time' : list(intervales[:-1]), 'S': list(S),'spectra':spectra}
+a,s = avgPowerSpectrum(pspectra,xOutput)
+p = 1 #(confidence interval parameter, here 1%-99%)
+pDown = np.percentile(a,p,axis=0)
+pUp = np.percentile(a,100-p,axis=0)
+avg = np.mean(a,0)
+std = np.std(a,0)
+'''
+
+
+def getXOutput(spectrumSize, vectorSize):
+    return np.logspace(0, spectrumSize, vectorSize)
 
 
 def avgPowerSpectrum(pspectra,xOutput):
@@ -80,27 +52,25 @@ def avgPowerSpectrum(pspectra,xOutput):
     from multiple power spectra, and returns 
     (interpolated) evaluations for xOutput values '''
     
-    if isinstance(pspectra,dict):
-        pspectra = pspectra.values()
-    
     l = len(pspectra)
     array = np.zeros([l,len(xOutput)])
-    S = []
+    # S = []
     
     for i,ps in enumerate(pspectra):
         #print i
-        s = entropy(ps/np.sum(ps),1)
-        S.append(s)
+        # s = entropy(ps/np.sum(ps),1)
+        # S.append(s)
         
         x = np.arange(1,len(ps)+1)
         f = interp1d(x,ps/np.sum(ps))
-        try:
-            array[i] = f(xOutput)
-        except:
-            array[i,0]=-1
-            continue
+        # try:
+        array[i] = f(xOutput)
+        # except:
+        #     array[i,0]=-1
+        #     continue
         
     index =np.argwhere(array[:,0]==-1)
     array = np.delete(array,index,0)
-    S = np.delete(S,index,0)
-    return array,S
+    #S = np.delete(S,index,0)
+    return array#,S
+
